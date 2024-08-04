@@ -260,6 +260,19 @@ impl Connection {
         }))
     }
 
+    // fn blockchain_block_tweaks(&self, params: &[Value]) -> Result<Value> {
+    //     let height = usize_from_value(params.get(0), "height")?;
+    //     let hash = self
+    //         .query
+    //         .chain()
+    //         .header_by_height(height)
+    //         .map(|entry| entry.hash())
+    //         .chain_err(|| "missing header")?;
+    //     let tweaks = self.query.chain().get_block_tweaks(hash);
+
+    //     Ok(json!({ "tweaks": tweaks, "height": height, "hash": hash }))
+    // }
+
     fn blockchain_estimatefee(&self, params: &[Value]) -> Result<Value> {
         let conf_target = usize_from_value(params.get(0), "blocks_count")?;
         let fee_rate = self
@@ -291,6 +304,81 @@ impl Connection {
             self.stats.subscriptions.inc();
         }
         Ok(status_hash)
+    }
+
+    pub fn tweaks_subscribe(&mut self, params: &[Value]) -> Result<Value> {
+        let height = usize_from_value(params.get(0), "height")?;
+        let count = usize_from_value(params.get(1), "count")?;
+        // let historical = bool_from_value_or(params.get(2), "historical", false);
+
+        let current_height = self.query.chain().best_header().height();
+        let sp_begin_height = self.query.config().sp_begin_height;
+        let last_header_entry = self.query.chain().best_header();
+        let last_height = last_header_entry.height();
+
+        let scan_height = if height < sp_begin_height.unwrap_or(0) {
+            sp_begin_height.unwrap_or(0)
+        } else {
+            height
+        };
+
+        let heights = scan_height + count;
+        let final_height = if last_height < heights {
+            last_height
+        } else {
+            heights
+        };
+
+        // let _ = (scan_height..=final_height).into_par_iter().map(|h| {
+        for h in scan_height..=final_height {
+            let empty = json!({ "jsonrpc":"2.0","method":"blockchain.tweaks.subscribe","params":[{h.to_string(): {}}]});
+
+            let blockheight_tweaked = self.query.blockheight_tweaked(h);
+            if !blockheight_tweaked {
+                self.send_values(&[empty.clone()])?;
+                continue;
+            }
+
+            let tweaks = self.query.tweaks(h);
+
+            if tweaks.is_empty() {
+                if h >= current_height {
+                    self.send_values(&[empty.clone()])?;
+                }
+
+                continue;
+            }
+
+            let mut tweak_map = HashMap::new();
+            for (txid, tweak) in tweaks.iter() {
+                let mut vout_map = HashMap::new();
+
+                for vout in tweak.vout_data.clone().into_iter() {
+                    let items = json!([
+                        regex::Regex::new(r"^225120")
+                            .unwrap()
+                            .replace(&vout.script_pubkey.to_string(), ""),
+                        vout.amount
+                    ]);
+                    vout_map.insert(vout.vout, items);
+                }
+
+                tweak_map.insert(
+                    txid.to_string(),
+                    json!({
+                        "tweak": tweak.tweak,
+                        "output_pubkeys": vout_map,
+                    }),
+                );
+            }
+
+            let _ = self.send_values(&[json!({"jsonrpc":"2.0","method":"blockchain.tweaks.subscribe","params":[{ h.to_string(): tweak_map }]})]);
+        }
+
+        self.send_values(&[
+            json!({"jsonrpc":"2.0","method":"blockchain.tweaks.subscribe","params":[{"message": "done"}]}),
+        ])?;
+        Ok(json!(current_height))
     }
 
     #[cfg(not(feature = "liquid"))]
@@ -423,6 +511,7 @@ impl Connection {
         let result = match method {
             "blockchain.block.header" => self.blockchain_block_header(params),
             "blockchain.block.headers" => self.blockchain_block_headers(params),
+            "blockchain.tweaks.subscribe" => self.tweaks_subscribe(params),
             "blockchain.estimatefee" => self.blockchain_estimatefee(params),
             "blockchain.headers.subscribe" => self.blockchain_headers_subscribe(),
             "blockchain.relayfee" => self.blockchain_relayfee(),

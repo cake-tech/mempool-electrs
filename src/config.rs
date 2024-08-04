@@ -75,6 +75,8 @@ pub struct Config {
     pub electrum_announce: bool,
     #[cfg(feature = "electrum-discovery")]
     pub tor_proxy: Option<std::net::SocketAddr>,
+    pub sp_begin_height: Option<usize>,
+    pub sp_min_dust: Option<usize>,
 }
 
 fn str_to_socketaddr(address: &str, what: &str) -> SocketAddr {
@@ -580,6 +582,8 @@ impl Config {
             electrum_announce: m.is_present("electrum_announce"),
             #[cfg(feature = "electrum-discovery")]
             tor_proxy: m.value_of("tor_proxy").map(|s| s.parse().unwrap()),
+            sp_begin_height: m.value_of("sp_begin_height").map(|s| s.parse().unwrap()),
+            sp_min_dust: m.value_of("sp_min_dust").map(|s| s.parse().unwrap()),
         };
         eprintln!("{:?}", config);
         config

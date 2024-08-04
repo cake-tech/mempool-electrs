@@ -50,7 +50,7 @@ fn block_from_value(value: Value) -> Result<Block> {
     deserialize(&block_bytes).chain_err(|| format!("failed to parse block {}", block_hex))
 }
 
-fn tx_from_value(value: Value) -> Result<Transaction> {
+pub fn tx_from_value(value: Value) -> Result<Transaction> {
     let tx_hex = value.as_str().chain_err(|| "non-string tx")?;
     let tx_bytes = hex::decode(tx_hex).chain_err(|| "non-hex tx")?;
     deserialize(&tx_bytes).chain_err(|| format!("failed to parse tx {}", tx_hex))
@@ -575,13 +575,18 @@ impl Daemon {
     pub fn gettransaction_raw(
         &self,
         txid: &Txid,
-        blockhash: &BlockHash,
+        // None requires txindex=1 in bitcoind
+        blockhash: Option<&BlockHash>,
         verbose: bool,
     ) -> Result<Value> {
         self.request(
             "getrawtransaction",
             json!([txid.to_hex(), verbose, blockhash]),
         )
+    }
+
+    pub(crate) fn gettxout(&self, txid: &Txid, vout: u32, include_mempool: bool) -> Result<Value> {
+        self.request("gettxout", json!([txid, vout, include_mempool]))
     }
 
     pub fn getmempooltx(&self, txhash: &Txid) -> Result<Transaction> {

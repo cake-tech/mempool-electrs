@@ -59,11 +59,13 @@ tiny_http = "0.11"
 url = "2.2.0"
 hyper = "0.14"
 hyperlocal = "0.8"
+silentpayments = { git = "https://github.com/cake-tech/rust-silentpayments", branch = "master" }
 # close to same tokio version as dependent by hyper v0.14 and hyperlocal 0.8 -- things can go awry if they mismatch
 tokio = { version = "1", features = ["sync", "macros"] }
 
 # optional dependencies for electrum-discovery
 electrum-client = { version = "0.8", optional = true }
+regex = "1.10.5"
 
 
 [dev-dependencies]

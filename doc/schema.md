@@ -54,6 +54,16 @@ Each spending input (except the coinbase) results in the following new rows (`S`
 
  * `"S{funding-txid:vout}{spending-txid:vin}" → ""`
 
+### `tweak`
+
+Each block results in the following new row:
+
+ * `"W{blockhash}" → "{tweaks}"` (list of tweaks included in the block)
+
+Each transaction results in the following new row:
+
+ * `"K{blockhash}{txid}" → "{tweak}{serialized-vout-data}"`
+
 #### Elements only
 
 Assets (re)issuances results in the following new rows (only for user-issued assets):

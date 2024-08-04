@@ -17,6 +17,8 @@ use crate::{
     elements::{lookup_asset, AssetRegistry, AssetSorting, LiquidAsset},
 };
 
+use super::schema::TweakData;
+
 const FEE_ESTIMATES_TTL: u64 = 60; // seconds
 
 const CONF_TARGETS: [u16; 28] = [
@@ -119,6 +121,14 @@ impl Query {
             .map(|tx| (tx, None));
 
         confirmed_txids.chain(mempool_txids).collect()
+    }
+
+    pub fn tweaks(&self, height: usize) -> Vec<(Txid, TweakData)> {
+        self.chain.tweaks(height)
+    }
+
+    pub fn blockheight_tweaked(&self, height: usize) -> bool {
+        self.chain.blockheight_tweaked(height)
     }
 
     pub fn stats(&self, scripthash: &[u8]) -> (ScriptStats, ScriptStats) {
