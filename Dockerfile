@@ -2,12 +2,14 @@ FROM debian:bookworm-slim AS base
 
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-RUN apt update -qy && \
-    apt install -qy librocksdb-dev curl
+RUN DEBIAN_FRONTEND=noninteractive apt update -qy && \
+    apt install --no-install-recommends -qy librocksdb-dev curl && \
+    apt clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 FROM base as build
 
-RUN apt install -qy git clang cmake
+RUN apt install --no-install-recommends -qy ca-certificates git clang cmake && \
+    apt clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV RUSTUP_HOME=/rust
 ENV CARGO_HOME=/cargo 
