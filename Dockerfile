@@ -8,7 +8,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt update -qy && \
 
 FROM base as build
 
-RUN apt install --no-install-recommends -qy ca-certificates git clang cmake && \
+RUN DEBIAN_FRONTEND=noninteractive apt update -qy && \
+    apt install --no-install-recommends -qy ca-certificates git clang cmake && \
     apt clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV RUSTUP_HOME=/rust
